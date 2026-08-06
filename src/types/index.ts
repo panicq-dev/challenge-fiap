@@ -18,6 +18,10 @@ export interface Flashcard {
   topicId: string;
   front: string;
   back: string;
+  reviewed?: boolean;
+  ok?: boolean;
+  reviewedCount?: number;
+  lastReviewedAt?: number;
 }
 
 export interface Subject {
@@ -50,4 +54,26 @@ export type RootTabParamList = {
   Home: undefined;
   Biblioteca: undefined;
   Conta: undefined;
+};
+
+export type RootStackParamList = {
+  Login: undefined;
+  Main: undefined;
+  Stats: undefined;
+};
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  bio?: string;
+}
+
+export type ThemeMode = "light" | "dark";
+
+export type AccountStackParamList = {
+  AccountMain: undefined;
+  EditProfile: undefined;
+  Settings: undefined;
+  Privacy: undefined;
+  Help: undefined;
 };

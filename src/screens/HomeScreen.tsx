@@ -62,18 +62,27 @@ export default function HomeScreen() {
   );
 
   const recentTopics = useMemo(() => {
+    // Build a list of topics with the newest review timestamp (if any)
     const topicsWithStudy = subjects
       .flatMap((subject) =>
-        subject.topics.map((topic) => ({ subject, topic })),
+        subject.topics.map((topic) => {
+          const topicFlashcards = flashcards.filter((card) => card.topicId === topic.id);
+          const lastReviewed = topicFlashcards.reduce((acc, cur) => {
+            if (!cur.lastReviewedAt) return acc;
+            return Math.max(acc, cur.lastReviewedAt);
+          }, 0 as number);
+
+          return { subject, topic, lastReviewed };
+        }),
       )
-      .filter(({ topic }) =>
-        flashcards.some((card) => card.topicId === topic.id),
-      );
+      .filter(({ topic, lastReviewed }) => topic && lastReviewed > 0)
+      .sort((a, b) => b.lastReviewed - a.lastReviewed);
 
     if (topicsWithStudy.length > 0) {
-      return topicsWithStudy.slice(0, 2);
+      return topicsWithStudy.slice(0, 2).map(({ subject, topic }) => ({ subject, topic }));
     }
 
+    // Fallback: show first topic from first two subjects
     return subjects
       .slice(0, 2)
       .flatMap((subject) => subject.topics.slice(0, 1))
@@ -137,7 +146,16 @@ export default function HomeScreen() {
 
         <View style={styles.actionsRow}>
           {actionItems.map((item) => (
-            <Pressable key={item.key} style={styles.actionCard}>
+            <Pressable
+              key={item.key}
+              style={styles.actionCard}
+              onPress={() => {
+                if (item.key === "stats") {
+                  // open Stats in root stack
+                  navigation.getParent?.()?.navigate?.("Stats" as any);
+                }
+              }}
+            >
               <View style={styles.actionIcon}>
                 <Ionicons name={item.icon} size={22} color={colors.primary} />
               </View>
@@ -175,7 +193,17 @@ export default function HomeScreen() {
           <Pressable
             key={topic.id}
             style={styles.recentCard}
-            onPress={handleViewAll}
+            onPress={() =>
+              navigation.navigate("Biblioteca" as any, {
+                screen: "ContentDetail",
+                params: {
+                  topicId: topic.id,
+                  subjectTitle: subject.title,
+                  subjectSubtitle: subject.subtitle,
+                  topicTitle: topic.title,
+                },
+              })
+            }
           >
             <View
               style={[

@@ -18,7 +18,7 @@ type Props = NativeStackScreenProps<LibraryStackParamList, "FlashcardStudy">;
 export default function FlashcardStudyScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { topicId, subjectTitle, topicTitle, startIndex = 0 } = route.params;
-  const { getFlashcardsByTopic } = useLibrary();
+  const { getFlashcardsByTopic, markFlashcardReviewed } = useLibrary();
 
   const flashcards = getFlashcardsByTopic(topicId);
   const [currentIndex, setCurrentIndex] = useState(startIndex);
@@ -53,7 +53,11 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
     goToIndex(currentIndex + 1);
   }
 
-  function handleMarkAndNext() {
+  function handleMarkAndNext(ok: boolean) {
+    if (currentCard) {
+      markFlashcardReviewed(currentCard.id, ok);
+    }
+
     if (currentIndex < total - 1) {
       handleNext();
     } else {
@@ -124,14 +128,14 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
 
         <Pressable
           style={[styles.controlButton, styles.controlWrong]}
-          onPress={handleMarkAndNext}
+          onPress={() => handleMarkAndNext(false)}
         >
           <Ionicons name="close" size={22} color="#FFFFFF" />
         </Pressable>
 
         <Pressable
           style={[styles.controlButton, styles.controlCorrect]}
-          onPress={handleMarkAndNext}
+          onPress={() => handleMarkAndNext(true)}
         >
           <Ionicons name="checkmark" size={22} color="#FFFFFF" />
         </Pressable>

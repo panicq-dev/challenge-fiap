@@ -1,16 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo } from "react";
-import {
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { ComponentProps, useMemo } from "react";
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors } from "../theme/colors";
+import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
+import { AccountStackParamList } from "../types";
+
+type Props = NativeStackScreenProps<AccountStackParamList, "AccountMain">;
+
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
+
+interface MenuItem {
+  label: string;
+  icon: IoniconName;
+  onPress: () => void;
+  destructive?: boolean;
+}
 
 const profileMetrics = [
   { label: "12 dias", value: "Sequência", icon: "flame" },
@@ -19,36 +26,67 @@ const profileMetrics = [
   { label: "48", value: "Documentos", icon: "document-text" },
 ] as const;
 
-const accountActions = [
-  { label: "Editar Perfil", icon: "person-circle-outline" },
-  { label: "Notificações", icon: "notifications-outline" },
-  { label: "Privacidade", icon: "lock-closed-outline" },
-] as const;
-
-const generalLinks = [
-  { label: "Ajuda e Suporte", icon: "help-circle-outline" },
-  { label: "Sair", icon: "exit-outline", destructive: true },
-] as const;
-
-export default function AccountScreen() {
+export default function AccountScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
+  const { colors } = useSettings();
+  const styles = useMemoStyles(colors);
 
-  const sections = useMemo(
+  const handleLogout = () => {
+    Alert.alert("Sair da conta", "Tem certeza que deseja sair?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Sair",
+        style: "destructive",
+        onPress: () => logout(),
+      },
+    ]);
+  };
+
+  const sections: { title: string; data: MenuItem[] }[] = useMemo(
     () => [
       {
         title: "Conta",
-        data: accountActions,
+        data: [
+          {
+            label: "Editar Perfil",
+            icon: "person-circle-outline",
+            onPress: () => navigation.navigate("EditProfile"),
+          },
+          {
+            label: "Geral",
+            icon: "options-outline",
+            onPress: () => navigation.navigate("Settings"),
+          },
+          {
+            label: "Privacidade",
+            icon: "lock-closed-outline",
+            onPress: () => navigation.navigate("Privacy"),
+          },
+        ],
       },
       {
         title: "Geral",
-        data: generalLinks,
+        data: [
+          {
+            label: "Ajuda e Suporte",
+            icon: "help-circle-outline",
+            onPress: () => navigation.navigate("Help"),
+          },
+          {
+            label: "Sair",
+            icon: "exit-outline",
+            destructive: true,
+            onPress: handleLogout,
+          },
+        ],
       },
     ],
-    [],
+    [navigation],
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}> 
+    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -59,8 +97,8 @@ export default function AccountScreen() {
               <Ionicons name="person" size={32} color={colors.white} />
             </View>
             <View style={styles.profileText}>
-              <Text style={styles.profileName}>Maria Silva</Text>
-              <Text style={styles.profileEmail}>maria.silva@email.com</Text>
+              <Text style={styles.profileName}>{user?.name ?? "Convidado"}</Text>
+              <Text style={styles.profileEmail}>{user?.email ?? ""}</Text>
             </View>
           </View>
 
@@ -80,13 +118,14 @@ export default function AccountScreen() {
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            <FlatList
+            <FlatList<MenuItem>
               data={section.data}
               keyExtractor={(item) => item.label}
               renderItem={({ item }) => (
                 <Pressable
                   style={styles.menuItem}
                   android_ripple={{ color: colors.background }}
+                  onPress={item.onPress}
                 >
                   <View style={styles.menuIconContainer}>
                     <Ionicons
@@ -104,11 +143,7 @@ export default function AccountScreen() {
                     {item.label}
                   </Text>
                   {!item.destructive && (
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color={colors.textMuted}
-                    />
+                    <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                   )}
                 </Pressable>
               )}
@@ -124,121 +159,79 @@ export default function AccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  profileCard: {
-    borderRadius: 28,
-    padding: 24,
-    backgroundColor: "#2F63F5",
-    marginBottom: 24,
-  },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  profileText: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: colors.white,
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.78)",
-  },
-  metricsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  metricCard: {
-    width: "48%",
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderRadius: 20,
-    padding: 16,
-  },
-  metricIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  metricValue: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: colors.white,
-    marginBottom: 4,
-  },
-  metricLabel: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.7)",
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.textSecondary,
-    marginBottom: 12,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  menuIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  menuLabel: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.text,
-    fontWeight: "600",
-  },
-  menuLabelDestructive: {
-    color: "#dc2626",
-  },
-  separator: {
-    height: 12,
-  },
-  footerText: {
-    textAlign: "center",
-    color: colors.textSecondary,
-    fontSize: 13,
-    marginTop: 8,
-  },
-});
+function useMemoStyles(colors: Record<string, string>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { paddingHorizontal: 20, paddingBottom: 32 },
+    profileCard: {
+      borderRadius: 28,
+      padding: 24,
+      backgroundColor: "#2F63F5",
+      marginBottom: 24,
+    },
+    profileHeader: { flexDirection: "row", alignItems: "center", marginBottom: 24 },
+    avatar: {
+      width: 64,
+      height: 64,
+      borderRadius: 20,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 16,
+    },
+    profileText: { flex: 1 },
+    profileName: { fontSize: 22, fontWeight: "800", color: colors.white, marginBottom: 4 },
+    profileEmail: { fontSize: 14, color: "rgba(255,255,255,0.78)" },
+    metricsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    metricCard: {
+      width: "48%",
+      backgroundColor: "rgba(255,255,255,0.12)",
+      borderRadius: 20,
+      padding: 16,
+    },
+    metricIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: colors.white,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
+    metricValue: { fontSize: 18, fontWeight: "800", color: colors.white, marginBottom: 4 },
+    metricLabel: { fontSize: 13, color: "rgba(255,255,255,0.7)" },
+    section: { marginBottom: 24 },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.textSecondary,
+      marginBottom: 12,
+    },
+    menuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.white,
+      borderRadius: 18,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    menuIconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: colors.background,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 16,
+    },
+    menuLabel: { flex: 1, fontSize: 16, color: colors.text, fontWeight: "600" },
+    menuLabelDestructive: { color: "#dc2626" },
+    separator: { height: 12 },
+    footerText: { textAlign: "center", color: colors.textSecondary, fontSize: 13, marginTop: 8 },
+  });
+}
