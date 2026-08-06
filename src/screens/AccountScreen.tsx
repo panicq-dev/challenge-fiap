@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo } from "react";
+import { ComponentProps, useMemo } from "react";
 import {
   FlatList,
   Pressable,
@@ -12,6 +12,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "../theme/colors";
 
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
+
+type MenuItem = {
+  label: string;
+  icon: IoniconName;
+  destructive?: boolean;
+};
+
 const profileMetrics = [
   { label: "12 dias", value: "Sequência", icon: "flame" },
   { label: "2.450", value: "Pontos", icon: "trophy" },
@@ -19,16 +27,16 @@ const profileMetrics = [
   { label: "48", value: "Documentos", icon: "document-text" },
 ] as const;
 
-const accountActions = [
+const accountActions: MenuItem[] = [
   { label: "Editar Perfil", icon: "person-circle-outline" },
   { label: "Notificações", icon: "notifications-outline" },
   { label: "Privacidade", icon: "lock-closed-outline" },
-] as const;
+];
 
-const generalLinks = [
+const generalLinks: MenuItem[] = [
   { label: "Ajuda e Suporte", icon: "help-circle-outline" },
   { label: "Sair", icon: "exit-outline", destructive: true },
-] as const;
+];
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
@@ -80,7 +88,7 @@ export default function AccountScreen() {
         {sections.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            <FlatList
+            <FlatList<MenuItem>
               data={section.data}
               keyExtractor={(item) => item.label}
               renderItem={({ item }) => (

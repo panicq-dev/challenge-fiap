@@ -51,3 +51,8 @@ export type RootTabParamList = {
   Biblioteca: undefined;
   Conta: undefined;
 };
+
+export type RootStackParamList = {
+  Login: undefined;
+  Main: undefined;
+};
