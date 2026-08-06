@@ -137,7 +137,16 @@ export default function HomeScreen() {
 
         <View style={styles.actionsRow}>
           {actionItems.map((item) => (
-            <Pressable key={item.key} style={styles.actionCard}>
+            <Pressable
+              key={item.key}
+              style={styles.actionCard}
+              onPress={() => {
+                if (item.key === "stats") {
+                  // open Stats in root stack
+                  navigation.getParent?.()?.navigate?.("Stats" as any);
+                }
+              }}
+            >
               <View style={styles.actionIcon}>
                 <Ionicons name={item.icon} size={22} color={colors.primary} />
               </View>
@@ -175,7 +184,17 @@ export default function HomeScreen() {
           <Pressable
             key={topic.id}
             style={styles.recentCard}
-            onPress={handleViewAll}
+            onPress={() =>
+              navigation.navigate("Biblioteca" as any, {
+                screen: "ContentDetail",
+                params: {
+                  topicId: topic.id,
+                  subjectTitle: subject.title,
+                  subjectSubtitle: subject.subtitle,
+                  topicTitle: topic.title,
+                },
+              })
+            }
           >
             <View
               style={[

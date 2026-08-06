@@ -18,6 +18,9 @@ export interface Flashcard {
   topicId: string;
   front: string;
   back: string;
+  reviewed?: boolean;
+  ok?: boolean;
+  reviewedCount?: number;
 }
 
 export interface Subject {
@@ -55,4 +58,5 @@ export type RootTabParamList = {
 export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
+  Stats: undefined;
 };

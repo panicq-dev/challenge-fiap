@@ -29,6 +29,7 @@ interface LibraryContextValue {
   addSubject: (input: CreateSubjectInput) => void;
   addTopic: (subjectId: string, title: string) => void;
   addFlashcard: (input: CreateFlashcardInput) => void;
+  markFlashcardReviewed: (flashcardId: string, ok: boolean) => void;
   getFlashcardsByTopic: (topicId: string) => Flashcard[];
 }
 
@@ -112,6 +113,21 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setFlashcards((current) => [...current, newFlashcard]);
   }, []);
 
+  const markFlashcardReviewed = useCallback((flashcardId: string, ok: boolean) => {
+    setFlashcards((current) =>
+      current.map((fc) =>
+        fc.id === flashcardId
+          ? {
+              ...fc,
+              reviewed: true,
+              ok,
+              reviewedCount: (fc.reviewedCount ?? 0) + 1,
+            }
+          : fc,
+      ),
+    );
+  }, []);
+
   const getFlashcardsByTopic = useCallback(
     (topicId: string) =>
       flashcards.filter((flashcard) => flashcard.topicId === topicId),
@@ -125,9 +141,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       addSubject,
       addTopic,
       addFlashcard,
+      markFlashcardReviewed,
       getFlashcardsByTopic,
     }),
-    [subjects, flashcards, addSubject, addTopic, addFlashcard, getFlashcardsByTopic],
+    [subjects, flashcards, addSubject, addTopic, addFlashcard, markFlashcardReviewed, getFlashcardsByTopic],
   );
 
   return (
