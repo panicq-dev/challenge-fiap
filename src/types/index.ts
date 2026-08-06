@@ -61,3 +61,19 @@ export type RootStackParamList = {
   Main: undefined;
   Stats: undefined;
 };
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  bio?: string;
+}
+
+export type ThemeMode = "light" | "dark";
+
+export type AccountStackParamList = {
+  AccountMain: undefined;
+  EditProfile: undefined;
+  Settings: undefined;
+  Privacy: undefined;
+  Help: undefined;
+};
