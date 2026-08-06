@@ -62,18 +62,27 @@ export default function HomeScreen() {
   );
 
   const recentTopics = useMemo(() => {
+    // Build a list of topics with the newest review timestamp (if any)
     const topicsWithStudy = subjects
       .flatMap((subject) =>
-        subject.topics.map((topic) => ({ subject, topic })),
+        subject.topics.map((topic) => {
+          const topicFlashcards = flashcards.filter((card) => card.topicId === topic.id);
+          const lastReviewed = topicFlashcards.reduce((acc, cur) => {
+            if (!cur.lastReviewedAt) return acc;
+            return Math.max(acc, cur.lastReviewedAt);
+          }, 0 as number);
+
+          return { subject, topic, lastReviewed };
+        }),
       )
-      .filter(({ topic }) =>
-        flashcards.some((card) => card.topicId === topic.id),
-      );
+      .filter(({ topic, lastReviewed }) => topic && lastReviewed > 0)
+      .sort((a, b) => b.lastReviewed - a.lastReviewed);
 
     if (topicsWithStudy.length > 0) {
-      return topicsWithStudy.slice(0, 2);
+      return topicsWithStudy.slice(0, 2).map(({ subject, topic }) => ({ subject, topic }));
     }
 
+    // Fallback: show first topic from first two subjects
     return subjects
       .slice(0, 2)
       .flatMap((subject) => subject.topics.slice(0, 1))

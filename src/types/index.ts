@@ -21,6 +21,7 @@ export interface Flashcard {
   reviewed?: boolean;
   ok?: boolean;
   reviewedCount?: number;
+  lastReviewedAt?: number;
 }
 
 export interface Subject {

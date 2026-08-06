@@ -108,6 +108,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       topicId: input.topicId,
       front,
       back,
+      reviewed: false,
+      ok: false,
+      reviewedCount: 0,
+      lastReviewedAt: undefined,
     };
 
     setFlashcards((current) => [...current, newFlashcard]);
@@ -122,6 +126,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
               reviewed: true,
               ok,
               reviewedCount: (fc.reviewedCount ?? 0) + 1,
+              lastReviewedAt: Date.now(),
             }
           : fc,
       ),

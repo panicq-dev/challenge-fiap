@@ -14,7 +14,7 @@ import { colors } from "../theme/colors";
 interface CreateSubjectModalProps {
   visible: boolean;
   onClose: () => void;
-  onCreate: (title: string, subtitle: string) => void;
+  onCreate: (title: string, subtitle: string, icon?: "calculator" | "atom" | "flask" | "book" | "dna" | "default") => void;
 }
 
 export default function CreateSubjectModal({
@@ -24,13 +24,23 @@ export default function CreateSubjectModal({
 }: CreateSubjectModalProps) {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
+  const [selectedIcon, setSelectedIcon] = useState<"calculator" | "atom" | "flask" | "book" | "dna" | "default">("default");
+
+  const iconOptions = [
+    { key: "calculator", label: "Calculator" },
+    { key: "atom", label: "Atom" },
+    { key: "flask", label: "Flask" },
+    { key: "book", label: "Book" },
+    { key: "dna", label: "DNA" },
+    { key: "default", label: "Default" },
+  ] as const;
 
   function handleCreate() {
     if (!title.trim()) {
       return;
     }
 
-    onCreate(title, subtitle);
+    onCreate(title, subtitle, selectedIcon);
     setTitle("");
     setSubtitle("");
     onClose();
@@ -70,6 +80,22 @@ export default function CreateSubjectModal({
             value={subtitle}
             onChangeText={setSubtitle}
           />
+
+          <Text style={[styles.label, { marginTop: 8 }]}>Ícone</Text>
+          <View style={styles.iconGrid}>
+            {iconOptions.map((opt) => (
+              <Pressable
+                key={opt.key}
+                style={[
+                  styles.iconOption,
+                  selectedIcon === opt.key && styles.iconOptionSelected,
+                ]}
+                onPress={() => setSelectedIcon(opt.key)}
+              >
+                <Ionicons name={opt.key as any} size={20} color={selectedIcon === opt.key ? colors.white : colors.text} />
+              </Pressable>
+            ))}
+          </View>
 
           <Pressable
             style={[styles.button, !title.trim() && styles.buttonDisabled]}
@@ -139,5 +165,27 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: "600",
+  },
+  iconGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  iconOption: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  iconOptionSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 });
