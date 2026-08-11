@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   FlatList,
   Pressable,
@@ -19,12 +19,39 @@ import { colors } from "../theme/colors";
 
 type Props = NativeStackScreenProps<LibraryStackParamList, "LibraryMain">;
 
-export default function LibraryScreen({ navigation }: Props) {
+export default function LibraryScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { subjects, addSubject } = useLibrary();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // If another screen requested opening a specific topic, navigate to it
+  useEffect(() => {
+    const params: any = route.params as any;
+    const openTopicId: string | undefined = params?.openTopicId;
+    if (openTopicId) {
+      // find subject and topic
+      const subject = subjects.find((s) => s.topics.some((t) => t.id === openTopicId));
+      const topic = subject?.topics.find((t) => t.id === openTopicId);
+      if (subject && topic) {
+        navigation.navigate("ContentDetail", {
+          topicId: topic.id,
+          subjectTitle: subject.title,
+          subjectSubtitle: subject.subtitle,
+          topicTitle: topic.title,
+        });
+
+        // clear params so we don't reopen repeatedly
+        navigation.setParams({
+          openTopicId: undefined,
+          openSubjectTitle: undefined,
+          openTopicTitle: undefined,
+          openSubjectSubtitle: undefined,
+        } as any);
+      }
+    }
+  }, [route.params, subjects, navigation]);
 
   const filteredSubjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -126,7 +153,7 @@ export default function LibraryScreen({ navigation }: Props) {
       <CreateSubjectModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onCreate={(title, subtitle) => addSubject({ title, subtitle })}
+        onCreate={(title, subtitle, icon) => addSubject({ title, subtitle, icon })}
       />
     </View>
   );

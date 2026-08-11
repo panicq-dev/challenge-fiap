@@ -12,8 +12,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
+import SubjectStatsModal from "../components/SubjectStatsModal";
 
 import { useLibrary } from "../context/LibraryContext";
+import { useTheme } from "../context/ThemeContext";
 import { RootTabParamList } from "../types";
 import { colors } from "../theme/colors";
 import { getSubjectIcon } from "../utils/icons";
@@ -21,14 +23,15 @@ import { getSubjectIcon } from "../utils/icons";
 const actionItems = [
   { key: "quiz", title: "Quiz", icon: "school-outline" },
   { key: "resumos", title: "Resumos", icon: "document-text-outline" },
-  { key: "stats", title: "Stats", icon: "bar-chart-outline" },
 ] as const;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const { subjects, flashcards } = useLibrary();
+  const { colors, toggleTheme, mode } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
   const filteredSubjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -46,16 +49,17 @@ export default function HomeScreen() {
   const subjectCards = useMemo(
     () =>
       filteredSubjects.slice(0, 3).map((subject) => {
-        const totalTopics = subject.topics.length;
-        const studiedTopics = subject.topics.filter((topic) =>
-          flashcards.some((card) => card.topicId === topic.id),
-        ).length;
+        const subjectFlashcards = flashcards.filter((fc) =>
+          subject.topics.some((t) => t.id === fc.topicId),
+        );
+        const totalFlashcards = subjectFlashcards.length;
+        const reviewedFlashcards = subjectFlashcards.filter((f) => f.reviewed).length;
 
         return {
           ...subject,
-          progress: totalTopics > 0 ? Math.round((studiedTopics / totalTopics) * 100) : 0,
+          progress: totalFlashcards > 0 ? Math.round((reviewedFlashcards / totalFlashcards) * 100) : 0,
           topicCountLabel:
-            totalTopics === 1 ? "1 tópico" : `${totalTopics} tópicos`,
+            subject.topics.length === 1 ? "1 tópico" : `${subject.topics.length} tópicos`,
         };
       }),
     [filteredSubjects, flashcards],
@@ -79,7 +83,7 @@ export default function HomeScreen() {
       .sort((a, b) => b.lastReviewed - a.lastReviewed);
 
     if (topicsWithStudy.length > 0) {
-      return topicsWithStudy.slice(0, 2).map(({ subject, topic }) => ({ subject, topic }));
+      return topicsWithStudy.slice(0, 3).map(({ subject, topic }) => ({ subject, topic }));
     }
 
     // Fallback: show first topic from first two subjects
@@ -95,7 +99,10 @@ export default function HomeScreen() {
 
   function renderSubjectCard({ item }: { item: (typeof subjectCards)[number] }) {
     return (
-      <Pressable style={styles.subjectCard} onPress={handleViewAll}>
+      <Pressable
+        style={[styles.subjectCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+        onPress={() => setSelectedSubject(item.id)}
+      >
         <View
           style={[
             styles.subjectIcon,
@@ -104,39 +111,42 @@ export default function HomeScreen() {
         >
           {getSubjectIcon(item.icon, 22, item.iconColor)}
         </View>
-        <Text style={styles.subjectTitle}>{item.title}</Text>
-        <Text style={styles.subjectSubtitle}>{item.subtitle}</Text>
+        <Text style={[styles.subjectTitle, { color: colors.text }]}>{item.title}</Text>
+        <Text style={[styles.subjectSubtitle, { color: colors.textSecondary }]}>{item.subtitle}</Text>
         <View style={styles.subjectFooter}>
-          <Text style={styles.subjectProgress}>{item.progress}% completo</Text>
-          <Text style={styles.subjectTopics}>{item.topicCountLabel}</Text>
+          <Text style={[styles.subjectProgress, { color: colors.primary }]}>{item.progress}% completo</Text>
+          <Text style={[styles.subjectTopics, { color: colors.textSecondary }]}>{item.topicCountLabel}</Text>
         </View>
       </Pressable>
     );
   }
 
+  const selected = subjects.find((s) => s.id === selectedSubject) ?? null;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}> 
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top + 16 }]}> 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.topBar}>
-          <Pressable style={styles.circleButton} hitSlop={8}>
-            <Ionicons name="menu-outline" size={24} color={colors.text} />
-          </Pressable>
-          <Text style={styles.brand}>NOTEZ</Text>
-          <Pressable style={styles.circleButton} hitSlop={8}>
-            <Ionicons name="notifications-outline" size={24} color={colors.text} />
+          <Text style={[styles.brand, { color: colors.text }]}>NOTEZ</Text>
+          <Pressable style={[styles.themeButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]} onPress={toggleTheme} hitSlop={8}>
+            <Ionicons
+              name={mode === "dark" ? "sunny-outline" : "moon-outline"}
+              size={20}
+              color={colors.text}
+            />
           </Pressable>
         </View>
 
-        <Text style={styles.greeting}>Olá, Estudante!</Text>
-        <Text style={styles.greetingSubtitle}>Continue de onde parou</Text>
+        <Text style={[styles.greeting, { color: colors.text }]}>Olá, Estudante!</Text>
+        <Text style={[styles.greetingSubtitle, { color: colors.textSecondary }]}>Continue de onde parou</Text>
 
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <Ionicons name="search-outline" size={20} color={colors.textMuted} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Buscar materiais, tópicos..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
@@ -148,25 +158,22 @@ export default function HomeScreen() {
           {actionItems.map((item) => (
             <Pressable
               key={item.key}
-              style={styles.actionCard}
+              style={[styles.actionCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
               onPress={() => {
-                if (item.key === "stats") {
-                  // open Stats in root stack
-                  navigation.getParent?.()?.navigate?.("Stats" as any);
-                }
+                // placeholder actions: Quiz / Resumos (not implemented)
               }}
             >
               <View style={styles.actionIcon}>
                 <Ionicons name={item.icon} size={22} color={colors.primary} />
               </View>
-              <Text style={styles.actionText}>{item.title}</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>{item.title}</Text>
             </Pressable>
           ))}
         </View>
 
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitle}>Minhas matérias</Text>
+            <Text style={styles.sectionTitle}>Desempenho geral</Text>
             <Text style={styles.sectionSubtitle}>
               {filteredSubjects.length} matérias disponíveis
             </Text>
@@ -185,25 +192,27 @@ export default function HomeScreen() {
           contentContainerStyle={styles.subjectList}
         />
 
+        <SubjectStatsModal subjectId={selectedSubject} visible={!!selectedSubject} onClose={() => setSelectedSubject(null)} />
+
         <View style={styles.sectionHeader}> 
-          <Text style={styles.sectionTitle}>Estudado recentemente</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Estudado recentemente</Text>
         </View>
 
         {recentTopics.map(({ subject, topic }) => (
           <Pressable
             key={topic.id}
-            style={styles.recentCard}
+            style={[styles.recentCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
             onPress={() =>
-              navigation.navigate("Biblioteca" as any, {
-                screen: "ContentDetail",
-                params: {
-                  topicId: topic.id,
-                  subjectTitle: subject.title,
-                  subjectSubtitle: subject.subtitle,
-                  topicTitle: topic.title,
-                },
-              })
-            }
+                navigation.navigate("Biblioteca" as any, {
+                  screen: "LibraryMain",
+                  params: {
+                    openTopicId: topic.id,
+                    openSubjectTitle: subject.title,
+                    openSubjectSubtitle: subject.subtitle,
+                    openTopicTitle: topic.title,
+                  },
+                })
+              }
           >
             <View
               style={[
@@ -214,8 +223,8 @@ export default function HomeScreen() {
               {getSubjectIcon(subject.icon, 20, subject.iconColor)}
             </View>
             <View style={styles.recentInfo}>
-              <Text style={styles.recentTopic}>{topic.title}</Text>
-              <Text style={styles.recentSubject}>{subject.title}</Text>
+              <Text style={[styles.recentTopic, { color: colors.text }]}>{topic.title}</Text>
+              <Text style={[styles.recentSubject, { color: colors.textSecondary }]}>{subject.title}</Text>
             </View>
             <Ionicons
               name="chevron-forward"
@@ -244,26 +253,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 24,
   },
-  circleButton: {
+  themeButton: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: colors.border,
   },
   brand: {
     fontSize: 18,
     fontWeight: "800",
-    color: colors.text,
     letterSpacing: 1,
   },
   greeting: {
     fontSize: 28,
     fontWeight: "800",
-    color: colors.text,
     marginBottom: 4,
   },
   greetingSubtitle: {

@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 
 import { Subject, Topic } from "../types";
 import { colors } from "../theme/colors";
@@ -10,6 +10,8 @@ interface SubjectCardProps {
   expanded: boolean;
   onToggle: () => void;
   onTopicPress: (topic: Topic) => void;
+  topicReviewed?: Record<string, boolean>;
+  containerStyle?: ViewStyle;
 }
 
 export default function SubjectCard({
@@ -17,12 +19,14 @@ export default function SubjectCard({
   expanded,
   onToggle,
   onTopicPress,
+  topicReviewed,
+  containerStyle,
 }: SubjectCardProps) {
   const topicLabel =
     subject.topics.length === 1 ? "1 tópico" : `${subject.topics.length} tópicos`;
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, containerStyle]}>
       <Pressable
         style={[styles.card, expanded && styles.cardExpanded]}
         onPress={onToggle}
@@ -67,6 +71,11 @@ export default function SubjectCard({
                   />
                 </View>
                 <Text style={styles.topicTitle}>{topic.title}</Text>
+                {topicReviewed?.[topic.id] && (
+                  <View style={styles.topicBadge}>
+                    <Text style={styles.topicBadgeText}>Revisado</Text>
+                  </View>
+                )}
                 <Ionicons
                   name="chevron-forward"
                   size={18}
@@ -152,6 +161,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
     fontWeight: "500",
+  },
+  topicBadge: {
+    backgroundColor: "#E0F2FE",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 8,
+  },
+  topicBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.primary,
   },
   emptyTopics: {
     padding: 16,

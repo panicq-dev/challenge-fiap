@@ -35,7 +35,12 @@ export interface Subject {
 }
 
 export type LibraryStackParamList = {
-  LibraryMain: undefined;
+  LibraryMain: {
+    openTopicId?: string;
+    openSubjectTitle?: string;
+    openSubjectSubtitle?: string;
+    openTopicTitle?: string;
+  } | undefined;
   ContentDetail: {
     topicId: string;
     subjectTitle: string;
@@ -47,6 +52,7 @@ export type LibraryStackParamList = {
     subjectTitle: string;
     topicTitle: string;
     startIndex?: number;
+    reviewOnlyUnreviewed?: boolean;
   };
 };
 

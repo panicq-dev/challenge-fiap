@@ -58,6 +58,7 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
 
   const flashcards = getFlashcardsByTopic(topicId);
+  const unreviewedFlashcards = flashcards.filter((card) => !card.reviewed);
 
   const filteredFlashcards = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -80,7 +81,8 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
       : [];
 
   function handleStartStudy(startIndex = 0) {
-    if (flashcards.length === 0) {
+    const studyCards = unreviewedFlashcards.length > 0 ? unreviewedFlashcards : flashcards;
+    if (studyCards.length === 0) {
       return;
     }
 
@@ -89,6 +91,7 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
       subjectTitle,
       topicTitle,
       startIndex,
+      reviewOnlyUnreviewed: unreviewedFlashcards.length > 0,
     });
   }
 
