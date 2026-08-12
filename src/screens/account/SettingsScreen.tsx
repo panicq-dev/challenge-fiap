@@ -107,7 +107,7 @@ function useMemoStyles(colors: Record<string, string>) {
     row: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: colors.white,
+      backgroundColor: colors.cardBackground,
       borderRadius: 18,
       padding: 16,
       gap: 12,
@@ -129,7 +129,7 @@ function useMemoStyles(colors: Record<string, string>) {
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
-      backgroundColor: colors.white,
+      backgroundColor: colors.cardBackground,
       borderRadius: 16,
       paddingVertical: 16,
       borderWidth: 1,

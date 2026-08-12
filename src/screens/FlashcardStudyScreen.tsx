@@ -14,24 +14,32 @@ import { useLibrary } from "../context/LibraryContext";
 import { useSettings } from "../context/SettingsContext";
 import { LibraryStackParamList } from "../types";
 import { ThemeColors } from "../theme/colors";
+import { FlashcardDifficulty } from "../types";
 
 type Props = NativeStackScreenProps<LibraryStackParamList, "FlashcardStudy">;
 
 export default function FlashcardStudyScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { colors } = useSettings();
-  const { topicId, subjectTitle, topicTitle, startIndex = 0, flashcardId } = route.params;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { topicId, subjectTitle, topicTitle, startIndex = 0, flashcardId, reviewOnlyUnreviewed } = route.params;
   const { getFlashcardsByTopic, markFlashcardReviewed } = useLibrary();
 
   const allTopicFlashcards = getFlashcardsByTopic(topicId);
   const flashcards = useMemo(() => {
+    let cards = allTopicFlashcards;
+    
+    if (reviewOnlyUnreviewed) {
+      cards = cards.filter((card) => !card.reviewed);
+    }
+    
     if (!flashcardId) {
-      return allTopicFlashcards;
+      return cards;
     }
 
-    const selectedCard = allTopicFlashcards.find((card) => card.id === flashcardId);
-    return selectedCard ? [selectedCard] : allTopicFlashcards;
-  }, [allTopicFlashcards, flashcardId]);
+    const selectedCard = cards.find((card) => card.id === flashcardId);
+    return selectedCard ? [selectedCard] : cards;
+  }, [allTopicFlashcards, flashcardId, reviewOnlyUnreviewed]);
 
   const [currentIndex, setCurrentIndex] = useState(flashcardId ? 0 : startIndex);
   const [showBack, setShowBack] = useState(false);
@@ -82,9 +90,8 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
     navigation.navigate("LibraryMain");
   }
 
-  function handleMarkAndNext(ok: boolean) {
+  function handleMarkAndNext(difficulty: FlashcardDifficulty) {
     if (currentCard) {
-      const difficulty = ok ? "easy" : "hard";
       markFlashcardReviewed(currentCard.id, difficulty);
     }
 
@@ -189,15 +196,22 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
         </Pressable>
 
         <Pressable
-          style={[styles.controlButton, styles.controlWrong]}
-          onPress={() => handleMarkAndNext(false)}
+          style={[styles.controlButton, styles.controlHard]}
+          onPress={() => handleMarkAndNext("hard")}
         >
-          <Ionicons name="close" size={22} color="#FFFFFF" />
+          <Ionicons name="remove" size={22} color="#FFFFFF" />
         </Pressable>
 
         <Pressable
-          style={[styles.controlButton, styles.controlCorrect]}
-          onPress={() => handleMarkAndNext(true)}
+          style={[styles.controlButton, styles.controlMedium]}
+          onPress={() => handleMarkAndNext("medium")}
+        >
+          <Ionicons name="remove-circle-outline" size={22} color="#FFFFFF" />
+        </Pressable>
+
+        <Pressable
+          style={[styles.controlButton, styles.controlEasy]}
+          onPress={() => handleMarkAndNext("easy")}
         >
           <Ionicons name="checkmark" size={22} color="#FFFFFF" />
         </Pressable>
@@ -216,7 +230,8 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
 
 const colorsPrimary = "#2563EB";
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
@@ -274,7 +289,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.cardBackground,
     borderRadius: 2,
   },
   card: {
@@ -330,11 +345,29 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: "#14B8A6",
   },
+  controlHard: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#EF4444",
+  },
+  controlMedium: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#F59E0B",
+  },
+  controlEasy: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#10B981",
+  },
   controlNext: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.cardBackground,
   },
   controlDisabled: {
     opacity: 0.4,
@@ -364,11 +397,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 28,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.cardBackground,
   },
   completeButtonText: {
     fontSize: 15,
     fontWeight: "700",
     color: "#2563EB",
   },
-});
+  });

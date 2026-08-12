@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSettings } from "../../context/SettingsContext";
 import { AccountStackParamList } from "../../types";
+import { ThemeColors } from "../../theme/colors";
 
 type Props = NativeStackScreenProps<AccountStackParamList, "Help">;
 
@@ -75,7 +76,7 @@ export default function HelpScreen({ navigation }: Props) {
   );
 }
 
-function useMemoStyles(colors: Record<string, string>) {
+function useMemoStyles(colors: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
@@ -96,7 +97,7 @@ function useMemoStyles(colors: Record<string, string>) {
     row: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: colors.white,
+      backgroundColor: colors.cardBackground,
       borderRadius: 18,
       padding: 16,
       gap: 12,

@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBackground,
     borderRadius: 28,
     padding: 24,
     shadowColor: colors.cardShadow,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   guestButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: colors.primary,
   },

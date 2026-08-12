@@ -19,7 +19,7 @@ export default function TabNavigator() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.tabInactive,
         tabBarStyle: {
-          backgroundColor: colors.white,
+          backgroundColor: colors.cardBackground,
           borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 64,

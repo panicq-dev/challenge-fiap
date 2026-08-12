@@ -116,7 +116,7 @@ export default function EditProfileScreen({ navigation }: Props) {
 }
 
 // Gera os estilos a partir das cores do tema ativo (claro/escuro).
-function useMemoStyles(colors: Record<string, string>) {
+function useMemoStyles(colors: import("../../theme/colors").ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
@@ -147,7 +147,7 @@ function useMemoStyles(colors: Record<string, string>) {
     inputWrapper: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: colors.white,
+      backgroundColor: colors.cardBackground,
       borderRadius: 16,
       paddingHorizontal: 16,
       paddingVertical: 14,

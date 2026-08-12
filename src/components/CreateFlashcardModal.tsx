@@ -99,7 +99,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: "flex-end",
     },
   container: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBackground,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,

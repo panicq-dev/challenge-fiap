@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { Modal, ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { useLibrary } from "../context/LibraryContext";
-import { colors } from "../theme/colors";
+import { useSettings } from "../context/SettingsContext";
 import { getSubjectIcon } from "../utils/icons";
 
 interface Props {
@@ -14,6 +14,8 @@ interface Props {
 export default function SubjectStatsModal({ subjectId, visible, onClose }: Props) {
   const { subjects, flashcards } = useLibrary();
   const subject = subjects.find((s) => s.id === subjectId) ?? null;
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const subjectFlashcards = useMemo(() => {
     if (!subject) return [];
@@ -82,25 +84,26 @@ export default function SubjectStatsModal({ subjectId, visible, onClose }: Props
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(11,13,24,0.45)", justifyContent: "center" },
-  container: { marginHorizontal: 16, backgroundColor: colors.white, borderRadius: 16, overflow: "hidden", maxHeight: "85%" },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderColor: colors.border },
-  iconWrap: { width: 48, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", marginRight: 8 },
-  title: { fontSize: 18, fontWeight: "800", color: colors.text },
-  subtitle: { fontSize: 13, color: colors.textSecondary },
-  content: { padding: 16 },
-  bigChart: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
-  bigChartLabels: { width: 96, alignItems: "center" },
-  bigNumber: { fontSize: 28, fontWeight: "900", color: colors.text },
-  bigLabel: { fontSize: 13, color: colors.textSecondary },
-  bigChartBarWrap: { flex: 1, paddingLeft: 12 },
-  bigChartBarBase: { height: 18, backgroundColor: colors.background, borderRadius: 10, overflow: "hidden" },
-  bigChartBarFill: { height: 18, backgroundColor: "#34D399" },
-  bigChartNote: { fontSize: 12, color: colors.textSecondary, marginTop: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", color: colors.text, marginBottom: 8 },
-  empty: { color: colors.textSecondary },
-  wrongRow: { backgroundColor: colors.background, padding: 12, borderRadius: 10, marginBottom: 8 },
-  wrongFront: { fontWeight: "700", color: colors.text },
-  wrongMeta: { fontSize: 12, color: colors.textSecondary, marginTop: 6 },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    overlay: { flex: 1, backgroundColor: "rgba(11,13,24,0.45)", justifyContent: "center" },
+    container: { marginHorizontal: 16, backgroundColor: colors.cardBackground, borderRadius: 16, overflow: "hidden", maxHeight: "85%" },
+    headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderColor: colors.border },
+    iconWrap: { width: 48, height: 48, borderRadius: 12, alignItems: "center", justifyContent: "center", marginRight: 8 },
+    title: { fontSize: 18, fontWeight: "800", color: colors.text },
+    subtitle: { fontSize: 13, color: colors.textSecondary },
+    content: { padding: 16 },
+    bigChart: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
+    bigChartLabels: { width: 96, alignItems: "center" },
+    bigNumber: { fontSize: 28, fontWeight: "900", color: colors.text },
+    bigLabel: { fontSize: 13, color: colors.textSecondary },
+    bigChartBarWrap: { flex: 1, paddingLeft: 12 },
+    bigChartBarBase: { height: 18, backgroundColor: colors.background, borderRadius: 10, overflow: "hidden" },
+    bigChartBarFill: { height: 18, backgroundColor: "#34D399" },
+    bigChartNote: { fontSize: 12, color: colors.textSecondary, marginTop: 8 },
+    sectionTitle: { fontSize: 16, fontWeight: "800", color: colors.text, marginBottom: 8 },
+    empty: { color: colors.textSecondary },
+    wrongRow: { backgroundColor: colors.background, padding: 12, borderRadius: 10, marginBottom: 8 },
+    wrongFront: { fontWeight: "700", color: colors.text },
+    wrongMeta: { fontSize: 12, color: colors.textSecondary, marginTop: 6 },
+  });

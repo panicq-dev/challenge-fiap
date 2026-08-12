@@ -26,6 +26,8 @@ const actionItems = [
   { key: "resumos", title: "Resumos", icon: "document-text-outline" },
 ] as const;
 
+const DAILY_GOAL = 20;
+
 function isSameDay(timestamp: number, compareTo: number) {
   const date = new Date(timestamp);
   const other = new Date(compareTo);
@@ -34,6 +36,44 @@ function isSameDay(timestamp: number, compareTo: number) {
     date.getMonth() === other.getMonth() &&
     date.getDate() === other.getDate()
   );
+}
+
+function calculateStreak(flashcards: any[]) {
+  if (flashcards.length === 0) return 0;
+  
+  const reviewedDays = new Set<string>();
+  flashcards.forEach((card) => {
+    if (card.lastReviewedAt) {
+      const date = new Date(card.lastReviewedAt);
+      const dayKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      reviewedDays.add(dayKey);
+    }
+  });
+  
+  if (reviewedDays.size === 0) return 0;
+  
+  let streak = 0;
+  const today = new Date();
+  let currentDate = new Date(today);
+  
+  // Check if today has reviews
+  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  if (!reviewedDays.has(todayKey)) {
+    // If no review today, check yesterday
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+  
+  while (true) {
+    const dayKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`;
+    if (reviewedDays.has(dayKey)) {
+      streak++;
+      currentDate.setDate(currentDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  
+  return streak;
 }
 
 export default function HomeScreen() {
@@ -59,6 +99,10 @@ export default function HomeScreen() {
     () => flashcards.filter((card) => !card.reviewed).length,
     [flashcards],
   );
+  
+  const streak = useMemo(() => calculateStreak(flashcards), [flashcards]);
+  const dailyGoalProgress = Math.min(reviewedTodayCount, DAILY_GOAL);
+  const dailyGoalPercent = Math.round((dailyGoalProgress / DAILY_GOAL) * 100);
 
   const filteredSubjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -202,6 +246,59 @@ export default function HomeScreen() {
             onChangeText={setSearchQuery}
           />
         </View>
+
+        {/* Streak & Daily Goal */}
+        <View style={[styles.streakCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+          <View style={styles.streakRow}>
+            <View style={styles.streakItem}>
+              <View style={[styles.streakIcon, { backgroundColor: colors.primary + "20" }]}>
+                <Ionicons name="flame-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.streakInfo}>
+                <Text style={[styles.streakLabel, { color: colors.textSecondary }]}>Ofensiva</Text>
+                <Text style={[styles.streakValue, { color: colors.text }]}>{streak} dia{streak !== 1 ? "s" : ""}</Text>
+              </View>
+            </View>
+            <View style={styles.streakDivider} />
+            <View style={styles.streakItem}>
+              <View style={[styles.streakIcon, { backgroundColor: colors.warning + "20" || "#F59E0B20" }]}>
+                <Ionicons name="flag-outline" size={20} color={colors.warning || "#F59E0B"} />
+              </View>
+              <View style={styles.streakInfo}>
+                <Text style={[styles.streakLabel, { color: colors.textSecondary }]}>Meta diária</Text>
+                <Text style={[styles.streakValue, { color: colors.text }]}>{dailyGoalProgress}/{DAILY_GOAL}</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.dailyGoalBarContainer}>
+            <View style={styles.dailyGoalBarBg}>
+              <View style={[styles.dailyGoalBarFill, { width: `${dailyGoalPercent}%` }]} />
+            </View>
+            <Text style={[styles.dailyGoalPercent, { color: colors.textSecondary }]}>{dailyGoalPercent}% concluído</Text>
+          </View>
+        </View>
+
+        {/* Revisão Express Button */}
+        {dueFlashcards.length > 0 && (
+          <Pressable
+            style={[styles.expressReviewButton, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              navigation.navigate("Biblioteca" as any, {
+                screen: "FlashcardStudy",
+                params: {
+                  topicId: dueFlashcards[0].topicId,
+                  subjectTitle: subjects.find((subj) => subj.topics.some((topic) => topic.id === dueFlashcards[0].topicId))?.title ?? "",
+                  topicTitle: subjects.find((subj) => subj.topics.some((topic) => topic.id === dueFlashcards[0].topicId))?.topics.find((t) => t.id === dueFlashcards[0].topicId)?.title ?? "",
+                  reviewOnlyUnreviewed: true,
+                },
+              });
+            }}
+          >
+            <Ionicons name="flash-outline" size={20} color="#FFFFFF" />
+            <Text style={styles.expressReviewText}>Revisão Express ({dueFlashcards.length} cards)</Text>
+            <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+          </Pressable>
+        )}
 
         <View style={[styles.statusRow, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}> 
           <View style={styles.statusItem}>
@@ -461,6 +558,84 @@ const useMemoStyles = (colors: ThemeColors) =>
       flex: 1,
       fontSize: 16,
       color: colors.text,
+    },
+    streakCard: {
+      borderRadius: 20,
+      borderWidth: 1,
+      padding: 16,
+      marginBottom: 16,
+      backgroundColor: colors.cardBackground,
+    },
+    streakRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    streakItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      gap: 10,
+    },
+    streakIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    streakInfo: {
+      flex: 1,
+    },
+    streakLabel: {
+      fontSize: 12,
+      marginBottom: 2,
+    },
+    streakValue: {
+      fontSize: 16,
+      fontWeight: "800",
+    },
+    streakDivider: {
+      width: 1,
+      height: 40,
+      backgroundColor: colors.border,
+      marginHorizontal: 8,
+    },
+    dailyGoalBarContainer: {
+      marginTop: 4,
+    },
+    dailyGoalBarBg: {
+      height: 8,
+      backgroundColor: colors.background,
+      borderRadius: 4,
+      overflow: "hidden",
+    },
+    dailyGoalBarFill: {
+      height: "100%",
+      backgroundColor: colors.primary,
+      borderRadius: 4,
+    },
+    dailyGoalPercent: {
+      fontSize: 12,
+      marginTop: 6,
+      textAlign: "center",
+    },
+    expressReviewButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      borderRadius: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      marginBottom: 16,
+      backgroundColor: colors.primary,
+    },
+    expressReviewText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: "#FFFFFF",
     },
     statusRow: {
       flexDirection: "row",

@@ -405,7 +405,7 @@ const createStyles = (colors: ThemeColors) =>
   studyBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
@@ -416,7 +416,7 @@ const createStyles = (colors: ThemeColors) =>
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: colors.cardBackground,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -437,7 +437,7 @@ const createStyles = (colors: ThemeColors) =>
   contentCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBackground,
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,

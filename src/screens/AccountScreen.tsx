@@ -197,7 +197,7 @@ function useMemoStyles(colors: ColorTheme) {
         },
         metricCard: {
           width: "48%",
-          backgroundColor: "rgba(255,255,255,0.12)",
+          backgroundColor: colors.cardBackground,
           borderRadius: 20,
           padding: 16,
         },
@@ -205,7 +205,7 @@ function useMemoStyles(colors: ColorTheme) {
           width: 36,
           height: 36,
           borderRadius: 12,
-          backgroundColor: colors.white,
+          backgroundColor: colors.cardBackground,
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 12,
@@ -222,7 +222,7 @@ function useMemoStyles(colors: ColorTheme) {
         menuItem: {
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: colors.white,
+          backgroundColor: colors.cardBackground,
           borderRadius: 18,
           paddingHorizontal: 16,
           paddingVertical: 16,

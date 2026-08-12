@@ -381,7 +381,7 @@ const createStyles = (colors: ThemeColors) =>
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: "center",
@@ -394,7 +394,7 @@ const createStyles = (colors: ThemeColors) =>
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBackground,
     marginHorizontal: 20,
     marginVertical: 12,
     paddingHorizontal: 16,
