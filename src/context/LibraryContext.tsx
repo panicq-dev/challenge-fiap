@@ -9,7 +9,7 @@ import {
 
 import { initialFlashcards } from "../data/initialFlashcards";
 import { initialSubjects } from "../data/initialData";
-import { Flashcard, Subject, SubjectIcon } from "../types";
+import { Flashcard, FlashcardDifficulty, Subject, SubjectIcon } from "../types";
 
 interface CreateSubjectInput {
   title: string;
@@ -21,6 +21,7 @@ interface CreateFlashcardInput {
   topicId: string;
   front: string;
   back: string;
+  difficulty?: FlashcardDifficulty;
 }
 
 interface LibraryContextValue {
@@ -29,8 +30,9 @@ interface LibraryContextValue {
   addSubject: (input: CreateSubjectInput) => void;
   addTopic: (subjectId: string, title: string) => void;
   addFlashcard: (input: CreateFlashcardInput) => void;
-  markFlashcardReviewed: (flashcardId: string, ok: boolean) => void;
+  markFlashcardReviewed: (flashcardId: string, difficulty: FlashcardDifficulty) => void;
   getFlashcardsByTopic: (topicId: string) => Flashcard[];
+  getDueFlashcards: () => Flashcard[];
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -46,6 +48,16 @@ function pickIconOption(index: number) {
   ];
 
   return options[index % options.length];
+}
+
+const REVIEW_INTERVALS_MS: Record<FlashcardDifficulty, number> = {
+  hard: 3 * 60 * 60 * 1000,
+  medium: 2 * 24 * 60 * 60 * 1000,
+  easy: 5 * 24 * 60 * 60 * 1000,
+};
+
+function getNextReviewAt(difficulty: FlashcardDifficulty) {
+  return Date.now() + REVIEW_INTERVALS_MS[difficulty];
 }
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
@@ -99,6 +111,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const addFlashcard = useCallback((input: CreateFlashcardInput) => {
     const front = input.front.trim();
     const back = input.back.trim();
+    const difficulty = input.difficulty ?? "medium";
     if (!front || !back) {
       return;
     }
@@ -109,35 +122,55 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       front,
       back,
       reviewed: false,
-      ok: false,
+      ok: difficulty !== "hard",
       reviewedCount: 0,
       lastReviewedAt: undefined,
+      difficulty,
+      nextReviewAt: Date.now(),
     };
 
     setFlashcards((current) => [...current, newFlashcard]);
   }, []);
 
-  const markFlashcardReviewed = useCallback((flashcardId: string, ok: boolean) => {
-    setFlashcards((current) =>
-      current.map((fc) =>
-        fc.id === flashcardId
-          ? {
-              ...fc,
-              reviewed: true,
-              ok,
-              reviewedCount: (fc.reviewedCount ?? 0) + 1,
-              lastReviewedAt: Date.now(),
-            }
-          : fc,
-      ),
-    );
-  }, []);
+  const markFlashcardReviewed = useCallback(
+    (flashcardId: string, difficulty: FlashcardDifficulty) => {
+      setFlashcards((current) =>
+        current.map((fc) =>
+          fc.id === flashcardId
+            ? {
+                ...fc,
+                reviewed: true,
+                ok: difficulty !== "hard",
+                difficulty,
+                reviewedCount: (fc.reviewedCount ?? 0) + 1,
+                lastReviewedAt: Date.now(),
+                nextReviewAt: getNextReviewAt(difficulty),
+              }
+            : fc,
+        ),
+      );
+    },
+    [],
+  );
 
   const getFlashcardsByTopic = useCallback(
     (topicId: string) =>
       flashcards.filter((flashcard) => flashcard.topicId === topicId),
     [flashcards],
   );
+
+  const getDueFlashcards = useCallback(() => {
+    const now = Date.now();
+    return flashcards
+      .filter((flashcard) => flashcard.nextReviewAt === undefined || flashcard.nextReviewAt <= now)
+      .sort((a, b) => {
+        const priority: Record<FlashcardDifficulty, number> = { hard: 0, medium: 1, easy: 2 };
+        const aPri = priority[a.difficulty];
+        const bPri = priority[b.difficulty];
+        if (aPri !== bPri) return aPri - bPri;
+        return (b.lastReviewedAt ?? 0) - (a.lastReviewedAt ?? 0);
+      });
+  }, [flashcards]);
 
   const value = useMemo(
     () => ({
@@ -148,8 +181,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       addFlashcard,
       markFlashcardReviewed,
       getFlashcardsByTopic,
+      getDueFlashcards,
     }),
-    [subjects, flashcards, addSubject, addTopic, addFlashcard, markFlashcardReviewed, getFlashcardsByTopic],
+    [subjects, flashcards, addSubject, addTopic, addFlashcard, markFlashcardReviewed, getFlashcardsByTopic, getDueFlashcards],
   );
 
   return (

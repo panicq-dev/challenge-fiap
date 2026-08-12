@@ -12,6 +12,7 @@ export interface ThemeColors {
   border: string;
   cardShadow: string;
   tabInactive: string;
+  danger: string;
 }
 
 export const lightColors: ThemeColors = {
@@ -28,6 +29,7 @@ export const lightColors: ThemeColors = {
   border: "#E2E8F0",
   cardShadow: "#000000",
   tabInactive: "#94A3B8",
+  danger: "#DC2626",
 };
 
 export const darkColors: ThemeColors = {
@@ -44,6 +46,7 @@ export const darkColors: ThemeColors = {
   border: "#334155",
   cardShadow: "#000000",
   tabInactive: "#94A3B8",
+  danger: "#F87171",
 };
 
 export const colors = lightColors;

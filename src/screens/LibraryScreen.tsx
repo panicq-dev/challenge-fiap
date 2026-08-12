@@ -14,17 +14,27 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreateSubjectModal from "../components/CreateSubjectModal";
 import SubjectCard from "../components/SubjectCard";
 import { useLibrary } from "../context/LibraryContext";
+import { useSettings } from "../context/SettingsContext";
 import { LibraryStackParamList, Subject, Topic } from "../types";
-import { colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 
 type Props = NativeStackScreenProps<LibraryStackParamList, "LibraryMain">;
 
+type SortOption = "alphabetical" | "progress" | "due";
+type FilterOption = "all" | "due" | "reviewed" | "notReviewed";
+
 export default function LibraryScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { subjects, addSubject } = useLibrary();
+  const { subjects, flashcards, addSubject } = useLibrary();
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("due");
+  const [filterOption, setFilterOption] = useState<FilterOption>("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   // If another screen requested opening a specific topic, navigate to it
   useEffect(() => {
@@ -53,21 +63,63 @@ export default function LibraryScreen({ navigation, route }: Props) {
     }
   }, [route.params, subjects, navigation]);
 
+  const subjectsWithStats = useMemo(() => {
+    const now = Date.now();
+    return subjects.map((subject) => {
+      const subjectFlashcards = flashcards.filter((flashcard) =>
+        subject.topics.some((topic) => topic.id === flashcard.topicId),
+      );
+      const reviewedCount = subjectFlashcards.filter((flashcard) => flashcard.reviewed).length;
+      const dueCount = subjectFlashcards.filter(
+        (flashcard) => flashcard.nextReviewAt === undefined || flashcard.nextReviewAt <= now,
+      ).length;
+      const unreviewedCount = subjectFlashcards.filter((flashcard) => !flashcard.reviewed).length;
+      const progress = subjectFlashcards.length > 0 ? reviewedCount / subjectFlashcards.length : 0;
+
+      return {
+        ...subject,
+        subjectFlashcards,
+        reviewedCount,
+        dueCount,
+        unreviewedCount,
+        progress,
+      };
+    });
+  }, [subjects, flashcards]);
+
   const filteredSubjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) {
-      return subjects;
-    }
+    let items = subjectsWithStats.filter((subject) => {
+      if (!query) {
+        return true;
+      }
 
-    return subjects.filter(
-      (subject) =>
+      return (
         subject.title.toLowerCase().includes(query) ||
         subject.subtitle.toLowerCase().includes(query) ||
-        subject.topics.some((topic) =>
-          topic.title.toLowerCase().includes(query),
-        ),
-    );
-  }, [subjects, searchQuery]);
+        subject.topics.some((topic) => topic.title.toLowerCase().includes(query))
+      );
+    });
+
+    items = items.filter((subject) => {
+      if (filterOption === "all") return true;
+      if (filterOption === "due") return subject.dueCount > 0;
+      if (filterOption === "reviewed") return subject.subjectFlashcards.length > 0 && subject.reviewedCount === subject.subjectFlashcards.length;
+      if (filterOption === "notReviewed") return subject.unreviewedCount > 0;
+      return true;
+    });
+
+    const sorted = [...items];
+    if (sortOption === "alphabetical") {
+      sorted.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortOption === "progress") {
+      sorted.sort((a, b) => b.progress - a.progress);
+    } else {
+      sorted.sort((a, b) => b.dueCount - a.dueCount || a.title.localeCompare(b.title));
+    }
+
+    return sorted;
+  }, [searchQuery, subjectsWithStats, filterOption, sortOption]);
 
   const subjectCountLabel =
     filteredSubjects.length === 1
@@ -112,14 +164,51 @@ export default function LibraryScreen({ navigation, route }: Props) {
         </View>
 
         <View style={styles.headerActions}>
-          <Pressable style={styles.iconButton} hitSlop={8}>
-            <Ionicons name="filter-outline" size={22} color={colors.text} />
-          </Pressable>
-          <Pressable style={styles.iconButton} hitSlop={8}>
-            <Ionicons name="grid-outline" size={22} color={colors.text} />
+          <Pressable
+            style={[
+              styles.iconButton,
+              showFilters && styles.iconButtonActive,
+            ]}
+            onPress={() => setShowFilters((current) => !current)}
+            hitSlop={8}
+          >
+            <Ionicons
+              name="filter-outline"
+              size={22}
+              color={showFilters ? colors.white : colors.text}
+            />
           </Pressable>
         </View>
       </View>
+
+      {showFilters && (
+        <View style={styles.filterRow}>
+          {([
+          { key: "all", label: "Todos" },
+          { key: "due", label: "Agendados" },
+          { key: "reviewed", label: "Revisados" },
+          { key: "notReviewed", label: "Não revisados" },
+        ] as const).map((option) => (
+          <Pressable
+            key={option.key}
+            style={[
+              styles.filterButton,
+              filterOption === option.key && styles.filterButtonActive,
+            ]}
+            onPress={() => setFilterOption(option.key)}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                filterOption === option.key && styles.filterButtonTextActive,
+              ]}
+            >
+              {option.label}
+            </Text>
+          </Pressable>
+        ))}
+        </View>
+      )}
 
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.textMuted} />
@@ -132,10 +221,38 @@ export default function LibraryScreen({ navigation, route }: Props) {
         />
       </View>
 
+      <View style={styles.sortRow}>
+        <Text style={styles.sortLabel}>Ordenar por</Text>
+        {([
+          { key: "due", label: "Agendados" },
+          { key: "progress", label: "Progresso" },
+          { key: "alphabetical", label: "A-Z" },
+        ] as const).map((option) => (
+          <Pressable
+            key={option.key}
+            style={[
+              styles.sortButton,
+              sortOption === option.key && styles.sortButtonActive,
+            ]}
+            onPress={() => setSortOption(option.key)}
+          >
+            <Text
+              style={[
+                styles.sortButtonText,
+                sortOption === option.key && styles.sortButtonTextActive,
+              ]}
+            >
+              {option.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       <FlatList
         data={filteredSubjects}
         keyExtractor={(item) => item.id}
         renderItem={renderSubject}
+        numColumns={1}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -159,11 +276,12 @@ export default function LibraryScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -199,6 +317,66 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+  filterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  filterButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterButtonText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  filterButtonTextActive: {
+    color: colors.white,
+    fontWeight: "700",
+  },
+  sortRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  sortLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginRight: 8,
+  },
+  sortButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sortButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  sortButtonText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  sortButtonTextActive: {
+    color: colors.white,
+    fontWeight: "700",
+  },
   iconButton: {
     width: 40,
     height: 40,
@@ -208,6 +386,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   searchContainer: {
     flexDirection: "row",
@@ -230,6 +412,14 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 100,
+  },
+  columnWrapper: {
+    justifyContent: "space-between",
+  },
+  gridItem: {
+    flex: 1,
+    minWidth: "48%",
+    maxWidth: "48%",
   },
   emptyText: {
     textAlign: "center",

@@ -1,15 +1,17 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
-import AccountScreen from "../screens/AccountScreen";
+import AccountStack from "./AccountStack";
 import HomeScreen from "../screens/HomeScreen";
+import { useSettings } from "../context/SettingsContext";
 import { RootTabParamList } from "../types";
-import { colors } from "../theme/colors";
 import { getTabIcon } from "../utils/icons";
 import LibraryStack from "./LibraryStack";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export default function TabNavigator() {
+  const { colors } = useSettings();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -44,7 +46,7 @@ export default function TabNavigator() {
       />
       <Tab.Screen
         name="Conta"
-        component={AccountScreen}
+        component={AccountStack}
         options={{ tabBarLabel: "Conta" }}
       />
     </Tab.Navigator>

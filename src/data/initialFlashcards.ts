@@ -1,5 +1,7 @@
 import { Flashcard } from "../types";
 
+const now = Date.now();
+
 export const initialFlashcards: Flashcard[] = [
   {
     id: "fc-1",
@@ -9,6 +11,8 @@ export const initialFlashcards: Flashcard[] = [
     reviewed: false,
     ok: false,
     reviewedCount: 0,
+    difficulty: "medium",
+    nextReviewAt: now,
   },
   {
     id: "fc-2",
@@ -18,6 +22,8 @@ export const initialFlashcards: Flashcard[] = [
     reviewed: false,
     ok: false,
     reviewedCount: 0,
+    difficulty: "medium",
+    nextReviewAt: now,
   },
   {
     id: "fc-3",
@@ -27,6 +33,8 @@ export const initialFlashcards: Flashcard[] = [
     reviewed: false,
     ok: false,
     reviewedCount: 0,
+    difficulty: "medium",
+    nextReviewAt: now,
   },
   {
     id: "fc-4",
@@ -36,5 +44,7 @@ export const initialFlashcards: Flashcard[] = [
     reviewed: false,
     ok: false,
     reviewedCount: 0,
+    difficulty: "medium",
+    nextReviewAt: now,
   },
 ];

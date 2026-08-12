@@ -13,6 +13,8 @@ export interface Topic {
   title: string;
 }
 
+export type FlashcardDifficulty = "easy" | "medium" | "hard";
+
 export interface Flashcard {
   id: string;
   topicId: string;
@@ -22,6 +24,8 @@ export interface Flashcard {
   ok?: boolean;
   reviewedCount?: number;
   lastReviewedAt?: number;
+  difficulty: FlashcardDifficulty;
+  nextReviewAt?: number;
 }
 
 export interface Subject {
@@ -52,6 +56,7 @@ export type LibraryStackParamList = {
     subjectTitle: string;
     topicTitle: string;
     startIndex?: number;
+    flashcardId?: string;
     reviewOnlyUnreviewed?: boolean;
   };
 };
@@ -66,4 +71,20 @@ export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   Stats: undefined;
+};
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  bio?: string;
+}
+
+export type ThemeMode = "light" | "dark";
+
+export type AccountStackParamList = {
+  AccountMain: undefined;
+  EditProfile: undefined;
+  Settings: undefined;
+  Privacy: undefined;
+  Help: undefined;
 };

@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -9,7 +9,8 @@ import {
   View,
 } from "react-native";
 
-import { colors } from "../theme/colors";
+import { useSettings } from "../context/SettingsContext";
+import { ThemeColors } from "../theme/colors";
 
 interface CreateSubjectModalProps {
   visible: boolean;
@@ -22,6 +23,8 @@ export default function CreateSubjectModal({
   onClose,
   onCreate,
 }: CreateSubjectModalProps) {
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<"calculator" | "atom" | "flask" | "book" | "dna" | "default">("default");
@@ -110,12 +113,13 @@ export default function CreateSubjectModal({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
-    justifyContent: "flex-end",
-  },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(15, 23, 42, 0.45)",
+      justifyContent: "flex-end",
+    },
   container: {
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,

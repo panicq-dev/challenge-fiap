@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -9,7 +9,8 @@ import {
   View,
 } from "react-native";
 
-import { colors } from "../theme/colors";
+import { useSettings } from "../context/SettingsContext";
+import { ThemeColors } from "../theme/colors";
 
 interface CreateFlashcardModalProps {
   visible: boolean;
@@ -22,6 +23,8 @@ export default function CreateFlashcardModal({
   onClose,
   onCreate,
 }: CreateFlashcardModalProps) {
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
 
@@ -88,12 +91,13 @@ export default function CreateFlashcardModal({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
-    justifyContent: "flex-end",
-  },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(15, 23, 42, 0.45)",
+      justifyContent: "flex-end",
+    },
   container: {
     backgroundColor: colors.white,
     borderTopLeftRadius: 24,

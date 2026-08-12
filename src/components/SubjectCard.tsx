@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { useMemo } from "react";
 
+import { useSettings } from "../context/SettingsContext";
 import { Subject, Topic } from "../types";
-import { colors } from "../theme/colors";
 import { getSubjectIcon } from "../utils/icons";
 
 interface SubjectCardProps {
@@ -22,6 +23,8 @@ export default function SubjectCard({
   topicReviewed,
   containerStyle,
 }: SubjectCardProps) {
+  const { colors } = useSettings();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const topicLabel =
     subject.topics.length === 1 ? "1 tópico" : `${subject.topics.length} tópicos`;
 
@@ -90,94 +93,95 @@ export default function SubjectCard({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    marginBottom: 12,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardExpanded: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderBottomWidth: 0,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
-  content: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  topicsContainer: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-  },
-  topicRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  topicIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  topicTitle: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  topicBadge: {
-    backgroundColor: "#E0F2FE",
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 8,
-  },
-  topicBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.primary,
-  },
-  emptyTopics: {
-    padding: 16,
-    textAlign: "center",
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-});
+const createStyles = (colors: ReturnType<typeof useSettings>['colors']) =>
+  StyleSheet.create({
+    wrapper: {
+      marginBottom: 12,
+    },
+    card: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "transparent",
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cardExpanded: {
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      borderBottomWidth: 0,
+    },
+    iconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 14,
+    },
+    content: {
+      flex: 1,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: 2,
+    },
+    subtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    topicsContainer: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderTopWidth: 0,
+      borderBottomLeftRadius: 16,
+      borderBottomRightRadius: 16,
+      paddingHorizontal: 12,
+      paddingBottom: 8,
+    },
+    topicRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    topicIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: "#EFF6FF",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    topicTitle: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: "500",
+    },
+    topicBadge: {
+      backgroundColor: "#E0F2FE",
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginRight: 8,
+    },
+    topicBadgeText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    emptyTopics: {
+      padding: 16,
+      textAlign: "center",
+      color: colors.textMuted,
+      fontSize: 14,
+    },
+  });

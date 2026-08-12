@@ -14,8 +14,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import CreateFlashcardModal from "../components/CreateFlashcardModal";
 import { useLibrary } from "../context/LibraryContext";
+import { useSettings } from "../context/SettingsContext";
 import { ContentViewMode, LibraryStackParamList } from "../types";
-import { colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 
 type Props = NativeStackScreenProps<LibraryStackParamList, "ContentDetail">;
 
@@ -52,12 +53,17 @@ const mockContent: Record<
 export default function ContentDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { topicId, subjectTitle, subjectSubtitle, topicTitle } = route.params;
+  const { colors } = useSettings();
+  const styles = createStyles(colors);
   const { getFlashcardsByTopic, addFlashcard } = useLibrary();
   const [activeMode, setActiveMode] = useState<ContentViewMode>("flashcard");
   const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
 
   const flashcards = getFlashcardsByTopic(topicId);
+  const dueFlashcards = flashcards.filter(
+    (card) => card.nextReviewAt === undefined || card.nextReviewAt <= Date.now(),
+  );
   const unreviewedFlashcards = flashcards.filter((card) => !card.reviewed);
 
   const filteredFlashcards = useMemo(() => {
@@ -80,17 +86,22 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
         )
       : [];
 
-  function handleStartStudy(startIndex = 0) {
-    const studyCards = unreviewedFlashcards.length > 0 ? unreviewedFlashcards : flashcards;
+  function handleStartStudy(startIndex = 0, flashcardId?: string) {
+    const studyCards = unreviewedFlashcards.length > 0 ? unreviewedFlashcards : dueFlashcards.length > 0 ? dueFlashcards : flashcards;
     if (studyCards.length === 0) {
       return;
     }
+
+    const chosenIndex = flashcardId
+      ? studyCards.findIndex((card) => card.id === flashcardId)
+      : studyCards.findIndex((card) => card.id === flashcards[startIndex]?.id);
 
     navigation.navigate("FlashcardStudy", {
       topicId,
       subjectTitle,
       topicTitle,
-      startIndex,
+      startIndex: chosenIndex >= 0 ? chosenIndex : 0,
+      flashcardId: flashcardId,
       reviewOnlyUnreviewed: unreviewedFlashcards.length > 0,
     });
   }
@@ -149,7 +160,7 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
             <Pressable
               key={card.id}
               style={styles.contentCard}
-              onPress={() => handleStartStudy(index)}
+              onPress={() => handleStartStudy(index, card.id)}
             >
               <View style={styles.contentIcon}>
                 <Ionicons
@@ -283,7 +294,8 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

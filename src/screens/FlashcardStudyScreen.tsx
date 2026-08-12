@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -11,18 +11,37 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useLibrary } from "../context/LibraryContext";
+import { useSettings } from "../context/SettingsContext";
 import { LibraryStackParamList } from "../types";
+import { ThemeColors } from "../theme/colors";
 
 type Props = NativeStackScreenProps<LibraryStackParamList, "FlashcardStudy">;
 
 export default function FlashcardStudyScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { topicId, subjectTitle, topicTitle, startIndex = 0 } = route.params;
+  const { colors } = useSettings();
+  const { topicId, subjectTitle, topicTitle, startIndex = 0, flashcardId } = route.params;
   const { getFlashcardsByTopic, markFlashcardReviewed } = useLibrary();
 
-  const flashcards = getFlashcardsByTopic(topicId);
-  const [currentIndex, setCurrentIndex] = useState(startIndex);
+  const allTopicFlashcards = getFlashcardsByTopic(topicId);
+  const flashcards = useMemo(() => {
+    if (!flashcardId) {
+      return allTopicFlashcards;
+    }
+
+    const selectedCard = allTopicFlashcards.find((card) => card.id === flashcardId);
+    return selectedCard ? [selectedCard] : allTopicFlashcards;
+  }, [allTopicFlashcards, flashcardId]);
+
+  const [currentIndex, setCurrentIndex] = useState(flashcardId ? 0 : startIndex);
   const [showBack, setShowBack] = useState(false);
+  const [studyComplete, setStudyComplete] = useState(false);
+
+  useEffect(() => {
+    setCurrentIndex(flashcardId ? 0 : startIndex);
+    setShowBack(false);
+    setStudyComplete(false);
+  }, [flashcardId, startIndex]);
 
   const currentCard = flashcards[currentIndex];
   const total = flashcards.length;
@@ -53,16 +72,28 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
     goToIndex(currentIndex + 1);
   }
 
+  function handleBackToLibrary() {
+    const parent = navigation.getParent();
+    if (parent) {
+      (parent as any).navigate("Biblioteca", { screen: "LibraryMain" });
+      return;
+    }
+
+    navigation.navigate("LibraryMain");
+  }
+
   function handleMarkAndNext(ok: boolean) {
     if (currentCard) {
-      markFlashcardReviewed(currentCard.id, ok);
+      const difficulty = ok ? "easy" : "hard";
+      markFlashcardReviewed(currentCard.id, difficulty);
     }
 
     if (currentIndex < total - 1) {
       handleNext();
-    } else {
-      navigation.goBack();
+      return;
     }
+
+    setStudyComplete(true);
   }
 
   if (total === 0) {
@@ -71,7 +102,7 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
         colors={["#1E40AF", "#2563EB", "#3B82F6"]}
         style={[styles.container, styles.emptyContainer, { paddingTop: insets.top }]}
       >
-        <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable onPress={handleBackToLibrary} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
         <Text style={styles.emptyText}>Nenhum flashcard para estudar</Text>
@@ -79,13 +110,44 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
     );
   }
 
+  if (studyComplete) {
+    return (
+      <LinearGradient
+        colors={[colors.primaryDark, colors.primary, colors.primaryLight]}
+        style={[styles.container, { paddingTop: insets.top + 16 }]}
+      >
+        <View style={styles.header}>
+          <Pressable onPress={handleBackToLibrary} hitSlop={8}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </Pressable>
+          <View style={styles.headerTitles}>
+            <Text style={styles.subjectTitle}>{subjectTitle}</Text>
+            <Text style={styles.topicTitle}>{topicTitle}</Text>
+          </View>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <View style={styles.completeCard}>
+          <Ionicons name="trophy-outline" size={48} color="#FFFFFF" />
+          <Text style={styles.completeTitle}>Parabéns por estudar conosco</Text>
+          <Text style={styles.completeSubtitle}>
+            Você concluiu {total} flashcard{total !== 1 ? "s" : ""}.
+          </Text>
+          <Pressable style={styles.completeButton} onPress={handleBackToLibrary}>
+            <Text style={styles.completeButtonText}>Voltar</Text>
+          </Pressable>
+        </View>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient
-      colors={["#1E3A8A", "#2563EB", "#3B82F6"]}
+      colors={[colors.primaryDark, colors.primary, colors.primaryLight]}
       style={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}
     >
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+        <Pressable onPress={handleBackToLibrary} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
 
@@ -145,7 +207,7 @@ export default function FlashcardStudyScreen({ navigation, route }: Props) {
           onPress={handleNext}
           disabled={currentIndex === total - 1}
         >
-          <Ionicons name="chevron-forward" size={24} color={colorsPrimary} />
+          <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
         </Pressable>
       </View>
     </LinearGradient>
@@ -276,5 +338,37 @@ const styles = StyleSheet.create({
   },
   controlDisabled: {
     opacity: 0.4,
+  },
+  completeCard: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  completeTitle: {
+    marginTop: 24,
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    textAlign: "center",
+  },
+  completeSubtitle: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "rgba(255,255,255,0.9)",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  completeButton: {
+    marginTop: 28,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 28,
+    backgroundColor: "#FFFFFF",
+  },
+  completeButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#2563EB",
   },
 });

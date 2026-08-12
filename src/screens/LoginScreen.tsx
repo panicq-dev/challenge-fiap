@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,17 +10,48 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { useAuth } from "../context/AuthContext";
 import { colors } from "../theme/colors";
 import { RootStackParamList } from "../types";
 
-type Props = NativeStackScreenProps<RootStackParamList, "Login">;
+type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Login">;
 
-export default function LoginScreen({ navigation }: Props) {
+export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<LoginScreenNavigationProp>();
+  const { login, loginAsGuest } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Ao logar (ou entrar sem login), o AuthContext atualiza `isAuthenticated`
+  // e o App.tsx troca automaticamente para a stack "Main". Não é preciso
+  // chamar navigation.navigate aqui.
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) return;
+    setLoading(true);
+    try {
+      await login(email.trim(), password);
+      navigation.replace("Main");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuest = async () => {
+    setLoading(true);
+    try {
+      await loginAsGuest();
+      navigation.replace("Main");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const canLogin = email.trim().length > 0 && password.trim().length > 0;
 
   return (
     <ScrollView
@@ -71,13 +103,22 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <Pressable style={[styles.button, styles.buttonDisabled]} disabled>
-          <Text style={styles.buttonText}>Entrar</Text>
+        <Pressable
+          style={[styles.button, (!canLogin || loading) && styles.buttonDisabled]}
+          onPress={handleLogin}
+          disabled={!canLogin || loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.buttonText}>Entrar</Text>
+          )}
         </Pressable>
 
         <Pressable
           style={[styles.button, styles.guestButton]}
-          onPress={() => navigation.replace("Main")}
+          onPress={handleGuest}
+          disabled={loading}
         >
           <Text style={[styles.buttonText, styles.guestButtonText]}>
             Entrar sem login
@@ -85,8 +126,9 @@ export default function LoginScreen({ navigation }: Props) {
         </Pressable>
 
         <Text style={styles.noteText}>
-          O login é apenas visual neste protótipo. Use "Entrar sem login" para
-          acessar o app.
+          O login ainda é local (mock) neste protótipo — os dados ficam salvos
+          apenas no seu dispositivo. Use "Entrar sem login" para acessar como
+          convidado.
         </Text>
       </View>
     </ScrollView>
@@ -178,9 +220,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: colors.primary,
   },
   buttonDisabled: {
-    backgroundColor: colors.primary,
     opacity: 0.6,
   },
   guestButton: {
