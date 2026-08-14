@@ -13,6 +13,35 @@ export interface Topic {
   title: string;
 }
 
+export interface StudyExerciseOption {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+export interface StudyExercise {
+  id: string;
+  prompt: string;
+  options: StudyExerciseOption[];
+  explanation: string;
+}
+
+export interface StudySummary {
+  id: string;
+  title: string;
+  text: string;
+  bullets: string[];
+}
+
+export interface GeneratedStudyContent {
+  id: string;
+  topicId: string;
+  sourceText: string;
+  summary: StudySummary;
+  exercise: StudyExercise;
+  generatedAt: number;
+}
+
 export type FlashcardDifficulty = "easy" | "medium" | "hard";
 
 export interface Flashcard {

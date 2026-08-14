@@ -9,7 +9,14 @@ import {
 
 import { initialFlashcards } from "../data/initialFlashcards";
 import { initialSubjects } from "../data/initialData";
-import { Flashcard, FlashcardDifficulty, Subject, SubjectIcon } from "../types";
+import { generateStudyContentFromText } from "../services/localAi";
+import {
+  Flashcard,
+  FlashcardDifficulty,
+  GeneratedStudyContent,
+  Subject,
+  SubjectIcon,
+} from "../types";
 
 interface CreateSubjectInput {
   title: string;
@@ -27,12 +34,19 @@ interface CreateFlashcardInput {
 interface LibraryContextValue {
   subjects: Subject[];
   flashcards: Flashcard[];
+  studyContentByTopic: Record<string, GeneratedStudyContent>;
   addSubject: (input: CreateSubjectInput) => void;
   addTopic: (subjectId: string, title: string) => void;
   addFlashcard: (input: CreateFlashcardInput) => void;
   markFlashcardReviewed: (flashcardId: string, difficulty: FlashcardDifficulty) => void;
   getFlashcardsByTopic: (topicId: string) => Flashcard[];
   getDueFlashcards: () => Flashcard[];
+  getStudyContentByTopic: (topicId: string) => GeneratedStudyContent | undefined;
+  generateStudyContent: (
+    topicId: string,
+    sourceText: string,
+    topicTitle?: string,
+  ) => Promise<GeneratedStudyContent | null>;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -63,6 +77,9 @@ function getNextReviewAt(difficulty: FlashcardDifficulty) {
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
   const [flashcards, setFlashcards] = useState<Flashcard[]>(initialFlashcards);
+  const [studyContentByTopic, setStudyContentByTopic] = useState<
+    Record<string, GeneratedStudyContent>
+  >({});
 
   const addSubject = useCallback((input: CreateSubjectInput) => {
     const trimmedTitle = input.title.trim();
@@ -172,18 +189,45 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       });
   }, [flashcards]);
 
+  const getStudyContentByTopic = useCallback(
+    (topicId: string) => studyContentByTopic[topicId],
+    [studyContentByTopic],
+  );
+
+  const generateStudyContent = useCallback(
+    async (topicId: string, sourceText: string, topicTitle?: string) => {
+      const trimmedText = sourceText.trim();
+      if (!trimmedText) {
+        return null;
+      }
+
+      const generated = await generateStudyContentFromText(topicId, trimmedText, topicTitle);
+
+      setStudyContentByTopic((current) => ({
+        ...current,
+        [topicId]: generated,
+      }));
+
+      return generated;
+    },
+    [],
+  );
+
   const value = useMemo(
     () => ({
       subjects,
       flashcards,
+      studyContentByTopic,
       addSubject,
       addTopic,
       addFlashcard,
       markFlashcardReviewed,
       getFlashcardsByTopic,
       getDueFlashcards,
+      getStudyContentByTopic,
+      generateStudyContent,
     }),
-    [subjects, flashcards, addSubject, addTopic, addFlashcard, markFlashcardReviewed, getFlashcardsByTopic, getDueFlashcards],
+    [subjects, flashcards, studyContentByTopic, addSubject, addTopic, addFlashcard, markFlashcardReviewed, getFlashcardsByTopic, getDueFlashcards, getStudyContentByTopic, generateStudyContent],
   );
 
   return (

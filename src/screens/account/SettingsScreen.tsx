@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useSettings } from "../../context/SettingsContext";
+import { ThemeColors } from "../../theme/colors";
 import { AccountStackParamList, ThemeMode } from "../../types";
 
 type Props = NativeStackScreenProps<AccountStackParamList, "Settings">;
@@ -86,7 +87,7 @@ export default function SettingsScreen({ navigation }: Props) {
   );
 }
 
-function useMemoStyles(colors: Record<string, string>) {
+function useMemoStyles(colors: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {

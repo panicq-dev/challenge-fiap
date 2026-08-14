@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreateFlashcardModal from "../components/CreateFlashcardModal";
 import { useLibrary } from "../context/LibraryContext";
 import { useSettings } from "../context/SettingsContext";
+import { summarizeTextWithGroq } from "../services/groqService";
+import { extractTextFromSelectedImage } from "../services/ocr";
 import { ContentViewMode, LibraryStackParamList } from "../types";
 import { ThemeColors } from "../theme/colors";
 
@@ -26,45 +29,49 @@ const viewModes: { key: ContentViewMode; label: string }[] = [
   { key: "resumos", label: "Resumos" },
 ];
 
-const mockContent: Record<
-  Exclude<ContentViewMode, "flashcard">,
-  { title: string; items: string[] }
-> = {
-  exercicios: {
-    title: "Exercícios",
-    items: [
-      "1. Resolva: 2x + 5 = 15",
-      "2. Determine o valor de x: 3x - 7 = 8",
-      "3. Resolva: 5(x + 2) = 25",
-      "4. Encontre x: x/4 + 3 = 7",
-    ],
-  },
-  resumos: {
-    title: "Resumos",
-    items: [
-      "Equações do 1º grau possuem expoente 1 na incógnita.",
-      "Para resolver, isole a incógnita usando operações inversas.",
-      "Sempre verifique a solução substituindo na equação original.",
-      "Equações equivalentes mantêm o mesmo conjunto solução.",
-    ],
-  },
-};
-
 export default function ContentDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { topicId, subjectTitle, subjectSubtitle, topicTitle } = route.params;
   const { colors } = useSettings();
   const styles = createStyles(colors);
-  const { getFlashcardsByTopic, addFlashcard } = useLibrary();
+  const {
+    getFlashcardsByTopic,
+    addFlashcard,
+    getStudyContentByTopic,
+    generateStudyContent,
+  } = useLibrary();
   const [activeMode, setActiveMode] = useState<ContentViewMode>("flashcard");
   const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isExtractingOcr, setIsExtractingOcr] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summary, setSummary] = useState("");
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [ocrText, setOcrText] = useState("");
 
   const flashcards = getFlashcardsByTopic(topicId);
   const dueFlashcards = flashcards.filter(
     (card) => card.nextReviewAt === undefined || card.nextReviewAt <= Date.now(),
   );
   const unreviewedFlashcards = flashcards.filter((card) => !card.reviewed);
+  const generatedContent = getStudyContentByTopic(topicId);
+
+  useEffect(() => {
+    if (!generatedContent && activeMode !== "flashcard") {
+      setIsGenerating(true);
+
+      const generatedText = [
+        `O tema ${topicTitle} envolve conceitos fundamentais para o estudo desta disciplina.`,
+        "A partir da leitura do material, é possível identificar os pontos principais, as relações entre ideias e os princípios que sustentam o assunto.",
+        "Esses elementos ajudam a organizar o raciocínio, revisar os conteúdos e responder exercícios de forma mais segura.",
+      ].join(" ");
+
+      generateStudyContent(topicId, generatedText, topicTitle)
+        .catch(() => null)
+        .finally(() => setIsGenerating(false));
+    }
+  }, [activeMode, generateStudyContent, generatedContent, topicId, topicTitle]);
 
   const filteredFlashcards = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -79,12 +86,24 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
     );
   }, [flashcards, searchQuery]);
 
-  const mockItems =
-    activeMode !== "flashcard"
-      ? mockContent[activeMode].items.filter((item) =>
-          item.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-      : [];
+  const exerciseItems = useMemo(() => {
+    if (activeMode !== "exercicios" || !generatedContent) {
+      return [];
+    }
+
+    return [
+      generatedContent.exercise.prompt,
+      ...generatedContent.exercise.options.map((option) => `${option.id.toUpperCase()}) ${option.text}`),
+    ];
+  }, [activeMode, generatedContent]);
+
+  const summaryItems = useMemo(() => {
+    if (activeMode !== "resumos" || !generatedContent) {
+      return [];
+    }
+
+    return generatedContent.summary.bullets;
+  }, [activeMode, generatedContent]);
 
   function handleStartStudy(startIndex = 0, flashcardId?: string) {
     const studyCards = unreviewedFlashcards.length > 0 ? unreviewedFlashcards : dueFlashcards.length > 0 ? dueFlashcards : flashcards;
@@ -195,20 +214,97 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
     );
   }
 
-  function renderMockContent() {
-    const content = mockContent[activeMode as Exclude<ContentViewMode, "flashcard">];
+  async function handleGenerateFromImage() {
+    setIsExtractingOcr(true);
+    setSummaryError(null);
+    setSummary("");
+    setOcrText("");
+
+    try {
+      const extractedText = await extractTextFromSelectedImage();
+      if (!extractedText) {
+        setSummaryError("Nenhum texto foi encontrado na imagem.");
+        return;
+      }
+
+      setOcrText(extractedText);
+      setIsSummarizing(true);
+      const generatedSummary = await summarizeTextWithGroq(extractedText);
+      setSummary(generatedSummary);
+      await generateStudyContent(topicId, extractedText, topicTitle);
+      setActiveMode("resumos");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao processar a imagem.";
+      setSummaryError(message);
+      console.warn("Falha ao extrair ou resumir texto da imagem:", error);
+    } finally {
+      setIsExtractingOcr(false);
+      setIsSummarizing(false);
+    }
+  }
+
+  function renderGeneratedContent() {
+    const isExerciseMode = activeMode === "exercicios";
+    const items = isExerciseMode ? exerciseItems : summaryItems;
+    const contentTitle = isExerciseMode
+      ? generatedContent?.exercise?.prompt || "Exercícios"
+      : generatedContent?.summary?.title || "Resumo";
 
     return (
       <>
-        <Text style={styles.sectionTitle}>{content.title}</Text>
-        {mockItems.length === 0 ? (
+        <Pressable
+          style={styles.ocrButton}
+          onPress={handleGenerateFromImage}
+          disabled={isExtractingOcr || isSummarizing}
+        >
+          {isExtractingOcr || isSummarizing ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Ionicons name="camera-outline" size={18} color={colors.white} />
+          )}
+          <Text style={styles.ocrButtonText}>
+            {isExtractingOcr
+              ? "Lendo imagem..."
+              : isSummarizing
+                ? "Gerando resumo..."
+                : "Gerar com OCR"}
+          </Text>
+        </Pressable>
+
+        {ocrText ? (
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Texto extraído</Text>
+            <Text style={styles.summaryText}>{ocrText}</Text>
+          </View>
+        ) : null}
+
+        {summaryError ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>Erro ao gerar resumo</Text>
+            <Text style={styles.errorText}>{summaryError}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.sectionTitle}>{contentTitle}</Text>
+
+        {isGenerating || isSummarizing ? (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.loadingText}>
+              {isSummarizing ? "Gerando resumo..." : "Gerando conteúdo por IA local..."}
+            </Text>
+          </View>
+        ) : !generatedContent ? (
+          <Text style={styles.emptyText}>Nenhum conteúdo foi gerado ainda.</Text>
+        ) : items.length === 0 ? (
           <Text style={styles.emptyText}>Nenhum item encontrado</Text>
         ) : (
-          mockItems.map((item, index) => (
+          items.map((item, index) => (
             <View key={`${activeMode}-${index}`} style={styles.contentCard}>
               <View style={styles.contentIcon}>
                 <Ionicons
-                  name="document-text-outline"
+                  name={isExerciseMode ? "school-outline" : "document-text-outline"}
                   size={18}
                   color={colors.primary}
                 />
@@ -217,6 +313,20 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
             </View>
           ))
         )}
+
+        {!isExerciseMode && (summary || generatedContent?.summary?.text) ? (
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Resumo geral</Text>
+            <Text style={styles.summaryText}>{summary || generatedContent?.summary?.text}</Text>
+          </View>
+        ) : null}
+
+        {isExerciseMode && generatedContent?.exercise?.explanation ? (
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Explicação</Text>
+            <Text style={styles.summaryText}>{generatedContent.exercise.explanation}</Text>
+          </View>
+        ) : null}
       </>
     );
   }
@@ -288,7 +398,7 @@ export default function ContentDetailScreen({ navigation, route }: Props) {
       >
         {activeMode === "flashcard"
           ? renderFlashcardContent()
-          : renderMockContent()}
+          : renderGeneratedContent()}
       </ScrollView>
     </View>
   );
@@ -402,6 +512,41 @@ const createStyles = (colors: ThemeColors) =>
     fontSize: 14,
     fontWeight: "600",
   },
+  ocrButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  ocrButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  errorBox: {
+    backgroundColor: "#FEE2E2",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#991B1B",
+    marginBottom: 4,
+  },
+  errorText: {
+    color: "#7F1D1D",
+    fontSize: 13,
+    lineHeight: 20,
+  },
   studyBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -477,6 +622,20 @@ const createStyles = (colors: ThemeColors) =>
     color: colors.text,
     lineHeight: 22,
   },
+  loadingState: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+  },
+  loadingText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   emptyState: {
     alignItems: "center",
     paddingVertical: 32,
@@ -494,6 +653,25 @@ const createStyles = (colors: ThemeColors) =>
     fontSize: 14,
     marginTop: 8,
     paddingHorizontal: 20,
+  },
+  summaryCard: {
+    backgroundColor: colors.cardBackground,
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  summaryTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 8,
+  },
+  summaryText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 22,
   },
   emptyButton: {
     marginTop: 20,
